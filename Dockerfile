@@ -1,18 +1,6 @@
-# Builder is ubuntu-based because we need i386 libs
-FROM steamcmd/steamcmd:ubuntu-22 as builder
-
-# Install prerequisites to download steamcmd
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl tar
-WORKDIR /root/installer
-
-# Download and unpack installer
-# Insecure was added, apparently some Steam CDN certificate expired.
-RUN curl -sqL --insecure https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | tar zxvf -
-
-#FROM alpine:latest
-FROM ubuntu:latest
-
+# https://github.com/sonroyaalmerol/steamcmd-arm64
+FROM ghcr.io/sonroyaalmerol/steamcmd-arm64:root-trixie-2026-02-01
+# steamcmd segfaults on the version 1 week newer than that one
 
 # The TMOD Version. Ensure that you follow the correct format. Version releases can be found at https://github.com/tModLoader/tModLoader/releases if you're lost.
 ARG TMOD_VERSION=v2025.12.3.0
@@ -100,55 +88,23 @@ ENV TMOD_JOURNEY_BIOME_SPREAD="0"
 # journeypermission_setspawnrate
 ENV TMOD_JOURNEY_SPAWN_RATE="0"
 
-# [!!!] The section for using a config file has been deprecated in favor of the environment variable approach.
-# Loading a configuration file expects a proper Terraria config file to be mapped to /root/terraria-server/serverconfig.txt
-# Set this to "Yes" if you would rather use a config file instead of the above settings.
-# ENV TMOD_USECONFIGFILE="No"
+RUN  apt update && apt -y install libarchive-tools tmux procps libicu76
 
-
-# Copy steamcmd and its required libs from the builder
-COPY --from=builder /root/installer/steamcmd.sh /usr/lib/games/steam/
-COPY --from=builder /root/installer/linux32/steamcmd /usr/lib/games/steam/
-COPY --from=builder /usr/games/steamcmd /usr/bin/steamcmd
-COPY --from=builder /etc/ssl/certs /etc/ssl/certs
-COPY --from=builder /lib/i386-linux-gnu /lib/
-COPY --from=builder /root/installer/linux32/libstdc++.so.6 /lib/
-RUN chown -R root:root /usr/bin/ /etc/ssl/certs /lib/ /usr/lib/
-
-RUN apt-get update \
-    && apt-get install -y wget unzip tmux bash libsdl2-2.0-0
-
-RUN mkdir /data
-RUN mkdir /data/tModLoader
-RUN mkdir /data/tModLoader/Worlds
-RUN mkdir /data/tModLoader/Mods
-RUN mkdir /data/steamMods
-
-EXPOSE 7777
+RUN mkdir /terraria-server && wget https://github.com/tModLoader/tModLoader/releases/download/${TMOD_VERSION}/tModLoader.zip -O-  | bsdtar -C /terraria-server -xf - && chown steam:steam -R /terraria-server
 
 WORKDIR /terraria-server
 
-RUN steamcmd /terraria-server +login anonymous +quit
+COPY --chmod=755 DotNetInstall.sh ./LaunchUtils
+COPY --chmod=755 inject.sh /usr/local/bin/inject
+COPY --chmod=755 autosave.sh .
+COPY --chmod=755 prepare-config.sh .
 
-RUN wget https://github.com/tModLoader/tModLoader/releases/download/${TMOD_VERSION}/tModLoader.zip
-RUN unzip -o tModLoader.zip \
-    && rm tModLoader.zip
+RUN bash -x ./LaunchUtils/DotNetInstall.sh
 
-COPY DotNetInstall.sh ./LaunchUtils
-COPY entrypoint.sh .
-COPY inject.sh /usr/local/bin/inject
-COPY autosave.sh .
-COPY prepare-config.sh .
+RUN chmod -R 777 /terraria-server
 
-RUN chmod 755 ./LaunchUtils/DotNetInstall.sh \
-    && chmod 755 ./LaunchUtils/ScriptCaller.sh \
-    && chmod 755 ./entrypoint.sh \
-    && chmod 755 ./autosave.sh \
-    && chmod 755 /usr/local/bin/inject \
-    && chmod 755 ./prepare-config.sh \
-    && chmod 755 ./start-tModLoaderServer.sh
+COPY --chmod=755 entrypoint.sh .
 
-RUN ./LaunchUtils/DotNetInstall.sh
-
-
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/terraria-server/entrypoint.sh"]
+USER steam
+EXPOSE 7777

@@ -1,13 +1,26 @@
-version: '3'
 services:
   tmodloader:
-    image: 'jacobsmile/tmodloader1.4:latest'
+    build:
+        context: .
+        args:
+            - "TMOD_VERSION=v2025.12.3.0"
     container_name: 'tmodloader'
+    # restart: unless-stopped
+    # ID of user "steam" in steamcmd container
+    user: "1000:1000"
     ports:
       - "7777:7777"
     expose:
       - "7777"
     environment:
+      # Steam login data for "+login" argument of steamcmd. Set to "accountname password" if anonymous login doesn't work for you for some reason. You'll have to figure something out if you have steam guard enabled in that case.
+      - "STEAM_LOGIN=anonymous"
+      # Set box64 optimization value
+      # - "generic" Generic ARM64
+      # - "rpi5" for Raspberry Pi 5 (4k page size)
+      # - "rpi5_16k" for Raspberry Pi 5 (16k page size)
+      # more here: https://github.com/sonroyaalmerol/steamcmd-arm64?tab=readme-ov-file#box64-builds
+      - "ARM64_DEVICE=rpi5_16k"
       # Download the Calamity mod and CalamityMusic mod.
       - "TMOD_AUTODOWNLOAD=2824688072,2824688266"
       # Enable the Calamity mod and CalamityMusic mod.
@@ -27,9 +40,13 @@ services:
       # (Deprecated) If TMOD_USECONFIGFILE is set to "Yes", it is expected to have a serverconfig.txt mapped. The Server Settings above will be ignored.
       - "TMOD_USECONFIGFILE=No"
       - "UPDATE_NOTICE=false"
-
     volumes:
-    ##### By default, the below setting will create a data directory on your host where this compose file lives.
-      - "./data:/data"
-      # Uncomment the below line if you plan to use a mapped config file. 
-      # - "/path/to/config/config.txt:/root/terraria-server/serverconfig.txt"
+      # Volumes must be accessible by host user with id==1000 inside the container
+      # Persistent volumes:
+      # /data/steamMods - stores donwloaded steam workshop mods
+      # /data/Worlds - stores donwloaded steam workshop mods
+      # Folder creation example:
+      # mkdir ./terraria_data && sudo chown -R 1000:1000 terraria_data
+      - "./terraria_data:/data"
+      # Uncomment the below line if you plan to use a mapped config file.
+      # - "/path/to/config/config.txt:/terraria-server/serverconfig.txt"

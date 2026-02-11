@@ -1,3 +1,40 @@
+Crude port of https://github.com/JACOBSMILE/tmodloader1.4 to be usable on an Raspberri Pi 5 with 4k/16k page size and 8 Gb of RAM.
+
+Uses steamcmd docker image https://github.com/sonroyaalmerol/steamcmd-arm64 as base image.
+
+On every container start:
+1. Steamcmd downloads mods from workshop from `TMOD_AUTODOWNLOAD` list (check original readme for details) using credentials provided via `STEAM_LOGIN` variable.
+1. `enabled.json` file is force-generated at internal `/data/tModLoader/Mods/enabled.json` for `TMOD_ENABLEDMODS` (check original readme for details).
+1. Links `/data/tModLoader/Mods/*.tmod` are generated pointing to original tmod files steamcmd storage folder for these mods like `/data/steamMods/steamapps/workshop/content/1281930/[steam_workshop_mod_id]/[mod_version]/[modname].tmod`
+1. Resulting `/data/tModLoader` folder is used as argument `-tmlsavedirectory` for tModLoader.
+1. Files from `/data/tModLoader/Mods/` are removed on container stop.
+
+
+Quick start:
+
+```
+git clone https://github.com/oksoff/tmodloader1.4_rpi5.git
+# create persistent storage
+# It must be accessible as user 1000 that is default 'steam' user created in sonroyaalmerol/steamcmd-arm64 docker image
+mkdir -p ./terraria_data/ && sudo chown -R 1000:1000 terraria_data
+docker compose up
+# server is running at localhost port 7777
+```
+Persistent data at `./terraria_data`:
+
+- `steamMods` - steam workshop storage with downloaded tmod files
+- `Worlds` - worlds storage
+
+Fork-speific optional arguments:
+- `STEAM_LOGIN` - login data for steamcmd's "+login" argument. "anonymous" by defualt.
+- `ARM64_DEVICE` - argument for steam cmd optimizations. "generic" by default. More info here: https://github.com/sonroyaalmerol/steamcmd-arm64?tab=readme-ov-file#box64-builds.
+
+
+
+Original Readme below
+
+---
+
 # tModLoader Powered By Docker
 [![Discord](https://img.shields.io/discord/1132368789518950521?logo=discord&label=Discord%20Server&style=for-the-badge)](https://discord.gg/dHnVYYGed7)
 
