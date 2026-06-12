@@ -1,9 +1,9 @@
 # https://github.com/sonroyaalmerol/steamcmd-arm64
-FROM ghcr.io/sonroyaalmerol/steamcmd-arm64:root-trixie-2026-02-01
+FROM ghcr.io/sonroyaalmerol/steamcmd-arm64:root-trixie-2026-06-07
 # steamcmd segfaults on the version 1 week newer than that one
 
 # The TMOD Version. Ensure that you follow the correct format. Version releases can be found at https://github.com/tModLoader/tModLoader/releases if you're lost.
-ARG TMOD_VERSION=v2025.12.3.0
+ARG TMOD_VERSION=v2026.04.3.0
 
 # Sends update messages to the console before launch.
 ENV UPDATE_NOTICE="true"
